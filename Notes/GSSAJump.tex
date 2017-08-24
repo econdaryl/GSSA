@@ -1,0 +1,149 @@
+\documentclass[letterpaper,12pt]{article}
+
+\usepackage{amsmath, amsfonts, amscd, amssymb, amsthm}
+\usepackage{graphicx}
+%\usepackage{import}
+\usepackage{versions}
+\usepackage{crop}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{makeidx}
+\usepackage{hyperref}
+\usepackage{ifthen}
+\usepackage[format=hang,font=normalsize,labelfont=bf]{caption}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{placeins}
+\usepackage{framed}
+\usepackage{enumitem}
+\usepackage{threeparttable}
+\usepackage{geometry}
+\geometry{letterpaper,tmargin=1in,bmargin=1in,lmargin=1in,rmargin=1in}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{delarray}
+\usepackage{lscape}
+\usepackage{float,color, colortbl}
+%\usepackage[pdftex]{graphicx}
+\usepackage{hyperref}
+\usepackage{tabu}
+\usepackage{appendix}
+\usepackage{listings}
+
+
+\include{thmstyle}
+\bibliographystyle{aer}
+\newcommand{\ve}{\varepsilon}
+
+\hypersetup{colorlinks,linkcolor=red,urlcolor=blue,citecolor=red}
+
+\begin{document}
+
+\section{Adding Jump Variables GSSA}
+
+\begin{spacing}{1.5}
+
+Consider a simple dynamic stochastic general equilibrium (DSGE) model with a set of exogenous state variables, labeled as the vector, $Z_t$ and endogenous state variables, labeled as the vector, $X_t$, following the notation of Uhlig.  \citet{JuddMaliarMaliar:2011} suggest making $X_{t+1}$ a nonlinear function of the state as in \eqref{Xfunc}.
+\begin{equation} \label{Xfunc}
+	X_{t+1} = \Psi(X_{t},Z_{t})
+\end{equation}
+
+They show how to obtain the parameters in the multivariate $\Psi$ function via estimation on simulated data.
+
+\citet{Uhlig:1999} considers a special case where the $\Psi$ function is linear and shows how to derive the coefficients using first-order approximations of the model's characterizing equations as shown in \eqref{Xlinear}.
+\begin{equation} \label{Xlinear}
+	X_{t+1} =P X_{t} + Q Z_{t}
+\end{equation}
+
+As the dimensionality of $X$ gets large it becomes advantagous to distinguish between true state variable and other endogenous variables that are not necessary to describe the state, but which may be difficult to solve for explicitly as functions of the true state variables.  Uhlig refers to these as "jump" variables and denotes them $Y_t$.  He suggests solving for linear functions that approximate the jumb variable values as shown in \eqref{Ylinear}.
+\begin{equation} \label{Ylinear}
+	Y_{t} =R X_{t} + S Z_{t}
+\end{equation}
+
+In order derive the coefficients of \eqref{Xlinear} and \eqref{Ylinear}, we must first linearize the corresponding behavioral equations.  The endogenous state variables are defined by equations we will write as below.
+\begin{equation} \label{XEulers}
+	E_t\left\{\Gamma(X_{t+2},X_{t+1},X_{t},Y_{t+1},Y_{t},Z_{t+1},Z_{t})\right\}=1
+\end{equation}
+
+These are linearized or log-linearized by Uhlig to take the following form:
+\begin{equation}\label{XEulerslinear}
+	E_t\left\{F X_{t+2} + G X_{t+1} + H X_{t} + J Y_{t+1} + K Y_{t} + L Z_{t+1} + M Z_{t}\right\}= 1
+\end{equation}
+
+Similarly, the behavioral equations that define the jump variables can be writtem as follows.
+\begin{equation}\label{YEulers}
+\Lambda(X_{t+1},X_{t},Y_{t},Z_{t})=1
+\end{equation}
+
+And these can be linearized as:
+\begin{equation}\label{YEulerslinear}
+	A X_{t+1} + B X_{t} + C Y_{t} + D Z_{t}= 1
+\end{equation}
+
+We propose estimating nonlinear versions of \eqref{YEulers} using the GSSA methodology.  To do so we write the jump functions as below.
+\begin{equation}\label{Yfunc}
+	Y_{t} = \Phi(X_{t},Z_{t})
+\end{equation}
+
+In our context the GSSA proceeds as follows:
+\begin{enumerate}
+\item Draw a time-series of serially independent shocks, $\{\varepsilon_t\}_{t=1}^T$ and construct the time-series  $\{Z_t\}_{t=1}^T$ using the law of motion given in \eqref{Zlinear}.
+\begin{equation}\label{Zlinear}
+	Z_{t+1} =N Z_{t} + \varepsilon_{t+1}
+\end{equation}
+
+\item Choose some initial guesses for the parameters in the functions \eqref{Xfunc} and \eqref{Yfunc}, denoted $\Theta_0$.
+
+\item Begin interation using $i=0$.
+
+\item Use $\Theta^i$ and $\{Z_t\}_{t=1}^T$ to construct the time-series $\{X_t\}_{t=1}^T$ and $\{Y_t\}_{t=1}^T$.
+
+\item Use the behavioral equations \eqref{XEulers} and \eqref{YEulers} to construct updated time series denoted $\{X'_t\}_{t=1}^T$ and $\{Y'_t\}_{t=1}^T$, as show below.
+\begin{equation}\label{Xupdate}
+	X'_{t+1} =E_t\left\{ \Gamma_t X_t\right\}
+\end{equation}
+\begin{equation}\label{Yupdate}
+	Y'_{t} =\Lambda_t X_t
+\end{equation}
+
+This will require some sort of quadrature to evaluate the expectation in \eqref{Xupdate}.
+
+For example, if $X_t$ were the aggregate capital stock, $k_t$, $Y_t$ were the labor supply chosen by households, $\ell_t$, and $Z_t$ were the aggregate level of technology, $z_t$, then:
+\begin{equation}\label{GammaEx}
+	\Gamma_t =\beta \frac{u_c(c_{t+1})(1+r_{t+1}-\delta)}{u_c(c_t)} 
+\end{equation}
+\begin{equation}\label{LambdaEx}
+	\Lambda_t =-\frac{u_c(c_{t})w_t}{u_{\ell}(c_t)} 
+\end{equation}
+
+Choosing nodes for the possible values of $z_{t+1}$ denoted $\{\omega_j\}_{j=1}^J$, equations \eqref{Xupdate} and \eqref{Yupdate} become:
+\begin{equation}\label{XupdateEx}
+	k'_{t+1} = \sum_{j=1}^J \omega_j \beta \frac{u_c(c_{j,t+1})(1+r_{j,t+1}-\delta)}{u_c(c_{jt})} k_{t+1}
+\end{equation}
+\begin{equation}\label{YupdateEx}
+	\ell '_t =  -\frac{u_c(c_{t})w_{t}}{u_{\ell}(c_{t})} \ell_t
+\end{equation}
+
+\item To update the parameters, run non-linear regressions of the form:
+\begin{equation}\label{XRegress}
+	X'_{t+1} =  \Psi(X_{t},Z_{t}) + e^X_t
+\end{equation}
+\begin{equation}\label{YRegress}
+	Y'_{t} =  \Phi(X_{t},Z_{t}) + e^Y_t
+\end{equation}
+This will yield updated values for the parameters, denoted $\Theta '_i$.
+
+\item Check for convergence by comparing the values of $\Theta_i$ and $\Theta '_i$.  If the values are sufficiently close end the algorithm.  If not, proceed to the next step.
+
+\item Update the parameter guesses uisng $\Theta _{i+1} = \xi \Theta_{i} + (1-\xi)\Theta '_{i}$.  Increment $i$ by one and return to step iv. 
+
+\end{enumerate}
+\end{spacing}
+
+\newpage
+
+\bibliography{GSSAJump}
+
+
+\end{document}

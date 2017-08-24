@@ -1,0 +1,15 @@
+\ifx\undefined\bysame
+\newcommand{\bysame}{\leavevmode\hbox to\leftmargin{\hrulefill\,\,}}
+\fi
+\begin{thebibliography}{xx}
+
+\harvarditem[Judd et al.]{Judd, Maliar and Maliar}{2011}{JuddMaliarMaliar:2011}
+{\bf Judd, Kenneth~L., Lilia Maliar, and Serguei Maliar}, ``Numerically Stable
+  and Accurate Stochastic Simulation Approaches for Solving Dynamic Economic
+  Models,'' {\it Quantitative Economics}, July 2011, {\it 2} (2), 173--210.
+
+\harvarditem[Uhlig]{Uhlig}{1999}{Uhlig:1999}
+{\bf Uhlig, Harald.}, {\it Computational Methods for the Study of Dynamic
+  Economies}, Oxford University Press,
+
+\end{thebibliography}
