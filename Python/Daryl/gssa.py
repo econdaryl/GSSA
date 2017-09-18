@@ -229,7 +229,7 @@ Xstart = np.ones(nx)*2
 # begin fixed point iteration
 dist = 1.
 count = 0
-while dist > ccrit and dist < 1000:
+while dist > ccrit:
     # check for maximum number of iterations
     count = count + 1
     if count > maxit:
@@ -256,7 +256,7 @@ while dist > ccrit and dist < 1000:
     Gam = np.zeros((T,nx))
     Lam = np.zeros((T,ny))
     
-    # generate discret support for epsilon to be used in expectations
+    # generate discrete support for epsilon to be used in expectations
     # using rectangular arbitrage
     # Eps are the central values
     # Phi are the associated probabilities
@@ -268,32 +268,6 @@ while dist > ccrit and dist < 1000:
     Eps = norm.ppf(Cum)
     
     # construct Gam and Lam series
-    '''
-    for i in range(0, npts):
-        for j in range(0, npts):
-            Zp = Z[0] + np.array(Eps[i],Eps[j])
-            Xp, Yp = XYfunc(X[0], Zp, XYparams, coeffs)
-            #print('Xp', Xp, 'X[0,:]', X[0,:])
-            #tGam, tLam = Modeldyn(Xp, X[0,:], Xstart, Yp, Y[0,:], Zp, Z[0], \
-            #    mparams)
-            theta01 = np.concatenate((Xp, X[0], Xstart, Yp, Y[0], Zp, Z[0]), axis=0)
-            print(theta01)
-            #input('Press Enter to Continue')
-            tGam, tLam = Modeldyn(theta01, mparams)
-            Gam[0] = Gam[0] + tGam*Phi[i]*Phi[j]
-            Lam[0] = Lam[0] + tLam*Phi[i]*Phi[j]
-    for t in range(1,T):
-        for i in range(0, npts):
-            for j in range(0, npts):
-                Zp = Z[t,:] + np.array(Eps[i],Eps[j])
-                Xp, Yp = XYfunc(X[t], Zp, XYparams, coeffs)
-                #tGam, tLam = Modeldyn(Xp, X[t,:], X[t-1,:], Yp, Y[t,:], Zp, Z[t], \
-                #    mparams)
-                theta02 = np.concatenate((Xp, X[t], X[t-1], Yp, Y[t], Zp, Z[t]), axis=0)
-                tGam, tLam = Modeldyn(theta02, mparams)                
-                Gam[t] = Gam[t] + tGam*Phi[i]*Phi[j]
-                Lam[t] = Lam[t] + tLam*Phi[i]*Phi[j]
-    '''
     for i in range(0, npts):
         for j in range(0,npts):
             theta01 = np.concatenate((X[1], X[0], Xstart, Y[1], Y[0], Z[1], Z[0]),axis=0)
@@ -315,12 +289,9 @@ while dist > ccrit and dist < 1000:
     Xnew = Gam*X
     Ynew = Lam*Y
     
-    #print 'Xnew: ', Xnew
-    #print 'Ynew: ', Ynew
-    
     # run nonlinear regression to get new coefficients
     XZ = np.append(X, Z, axis = 1)
-    XY = np.append(X, Y, axis = 1)
+    XY = np.append(Xnew, Ynew, axis = 1)
     XZ = XZ[0:T-1]
     XY = XY[1:T]
     if regtype == 'poly1':
@@ -332,11 +303,6 @@ while dist > ccrit and dist < 1000:
             XZbasis = np.append(XZbasis, temp, axis=0)       
     if fittype == 'MVOLS':
         coeffsnew = MVOLS(XY, XZbasis)
-    U,s,V = np.linalg.svd(X, full_matrices=False)
-    s = np.diag(s)
-    XX = np.dot(V, np.linalg.inv(s))
-    XY = np.dot(np.transpose(U), Y)
-    coeffsnew = np.dot(XX, XY)
         
     # calculate distance between coeffs and coeffsnew
     diff = coeffs - coeffsnew
@@ -344,12 +310,10 @@ while dist > ccrit and dist < 1000:
     print('coeffsnew', coeffsnew)
     print('X', X)
     print('Y', Y)
-    if np.isnan(coeffsnew).any():
-        print('wtf')
+
     dist = np.max(np.abs(diff))  
     
     print('count ', count, 'distance', dist)
     
     # update coeffs
     coeffs = (1-damp)*coeffs + damp*coeffsnew
-    #input('Press Enter to continue')
