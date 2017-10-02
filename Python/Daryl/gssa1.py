@@ -48,10 +48,6 @@ def Modeldefs(Xp, X, Y, Z, params):
     kp = Xp
     k = X
     ell = Y
-    if ell > 0.9999:
-        ell = 0.9999
-    elif ell < 0:
-        ell = 0
     z = Z
     
     # unpack params
@@ -98,10 +94,6 @@ def Modeldyn(theta0, params):
     
     # find definitions for now and next period
     ell = Y
-    if ell > 1:
-        ell = 0.9999
-    elif ell < 0:
-        ell = 0
     Y, w, r, T, c, i, u = Modeldefs(Xp, X, Y, Z, params)
     Yp, wp, rp, Tp, cp, ip, up = Modeldefs(Xpp, Xp, Yp, Zp, params)
     
@@ -110,7 +102,7 @@ def Modeldyn(theta0, params):
     E2 = (c**(-gamma)) / (beta*cp**(-gamma)*(1 + (1-tau)*(rp - delta))) - 1
     
     return np.array([E1, E2])
-
+    
 
 def poly1(Xin, XYparams):
     '''
@@ -125,10 +117,11 @@ def poly1(Xin, XYparams):
     # generate cross terms
     for i in range (0, nX):
         for j in range(i+1, nX):
-            temp = Xin[i]*Xin[j]
+            temp =Xin[i]*Xin[j]
             Xbasis = np.append(Xbasis, temp)
     return Xbasis
-        
+    
+    
 def XYfunc(Xm, Zn, XYparams, coeffs):
     '''
     Given X and Z today generate X and Y tomorrow
@@ -144,16 +137,11 @@ def XYfunc(Xm, Zn, XYparams, coeffs):
     Xn = XYout[0:nx]
     Yn = XYout[nx:nx+ny]  
     # convert from logs to levels
-    Xn = np.exp(Xn)
-    if Xn < 0:
-        Xn = np.array([0])
-    Yn = np.exp(Yn)
-    if Yn > 0.9999:
-        Yn = np.array([0.9999])
-    elif Yn < 0:
-        Yn = np.array([0])
+    Xn = np.exp(Xn)  
+    Yn = np.exp(Yn)    
     return Xn, Yn
-
+    
+    
 def MVOLS(Y, X):
     '''
     OLS regression with observations in rows
@@ -190,12 +178,12 @@ Sigsr = np.sqrt(Sig) # square root of VCV matrix
 
 
 # declare other parameters
-T = 500   # number of observations to simulate
+T = 20   # number of observations to simulate
 regtype = 'poly1' # functional form for X & Y functions 
 fittype = 'MVOLS'   # regression fitting method
 pord = 3  # order of polynomial for fitting function
 ccrit = 1.0E-8  # convergence criteria for coeffs change
-damp = 0.01  # damping paramter for fixed point algorithm
+damp = 0.5   # damping paramter for fixed point algorithm
 maxit = 500  # maximum number of iterations for fixed point algorithm
 XYparams = (regtype, fittype, pord, nx, ny, nz, ccrit, damp)
 
@@ -231,17 +219,17 @@ for t in range(1,T):
 # declare initial guess for coefficients
 if regtype == 'poly1':
     cnumb = int(pord*(nx+nz) + .5*(nx+nz-1)*(nx+nz-2))
-    coeffs = np.ones((cnumb,(nx+ny)))*.1
+    coeffs = np.ones((cnumb,(nx+ny)))*.01
     for i in range(0, nx+ny) :
         coeffs[:,i] = coeffs[:,i]*(i+1.)
     
 # declare starting values
-Xstart = np.ones(nx)*Xbar
+Xstart = np.ones(nx)*2
 
 # begin fixed point iteration
 dist = 1.
 count = 0
-while dist > ccrit:
+while dist > ccrit and dist < 1000:
     # check for maximum number of iterations
     count = count + 1
     if count > maxit:
@@ -268,7 +256,7 @@ while dist > ccrit:
     Gam = np.zeros((T,nx))
     Lam = np.zeros((T,ny))
     
-    # generate discrete support for epsilon to be used in expectations
+    # generate discret support for epsilon to be used in expectations
     # using rectangular arbitrage
     # Eps are the central values
     # Phi are the associated probabilities
@@ -280,33 +268,59 @@ while dist > ccrit:
     Eps = norm.ppf(Cum)
     
     # construct Gam and Lam series
+    '''
+    for i in range(0, npts):
+        for j in range(0, npts):
+            Zp = Z[0] + np.array(Eps[i],Eps[j])
+            Xp, Yp = XYfunc(X[0], Zp, XYparams, coeffs)
+            #print('Xp', Xp, 'X[0,:]', X[0,:])
+            #tGam, tLam = Modeldyn(Xp, X[0,:], Xstart, Yp, Y[0,:], Zp, Z[0], \
+            #    mparams)
+            theta01 = np.concatenate((Xp, X[0], Xstart, Yp, Y[0], Zp, Z[0]), axis=0)
+            print(theta01)
+            #input('Press Enter to Continue')
+            tGam, tLam = Modeldyn(theta01, mparams)
+            Gam[0] = Gam[0] + tGam*Phi[i]*Phi[j]
+            Lam[0] = Lam[0] + tLam*Phi[i]*Phi[j]
+    for t in range(1,T):
+        for i in range(0, npts):
+            for j in range(0, npts):
+                Zp = Z[t,:] + np.array(Eps[i],Eps[j])
+                Xp, Yp = XYfunc(X[t], Zp, XYparams, coeffs)
+                #tGam, tLam = Modeldyn(Xp, X[t,:], X[t-1,:], Yp, Y[t,:], Zp, Z[t], \
+                #    mparams)
+                theta02 = np.concatenate((Xp, X[t], X[t-1], Yp, Y[t], Zp, Z[t]), axis=0)
+                tGam, tLam = Modeldyn(theta02, mparams)                
+                Gam[t] = Gam[t] + tGam*Phi[i]*Phi[j]
+                Lam[t] = Lam[t] + tLam*Phi[i]*Phi[j]
+    '''
     for i in range(0, npts):
         for j in range(0,npts):
-            Xp, Yp = XYfunc(X[0], Z[0], XYparams, coeffs)
-            Zp = Z[0] + np.array(Eps[i],Eps[j])
-            theta01 = np.concatenate((Xp, X[0], Xstart, Yp, Y[0], Zp, Z[0]),axis=0)
-            tGam, tLam = Modeldyn(theta01, mparams) + 1
+            theta01 = np.concatenate((X[1], X[0], Xstart, Y[1], Y[0], Z[1], Z[0]),axis=0)
+            tGam, tLam = Modeldyn(theta01, mparams)
             Gam[0] = Gam[0] + tGam*Phi[i]*Phi[j]
             Lam[0] = Lam[0] + tLam*Phi[i]*Phi[j]
     for t in range(1,T):
         for i in range(0,npts):
             for j in range(0,npts):
                 Xp, Yp = XYfunc(X[t], Z[t], XYparams, coeffs)
-                Zp = Z[t] + np.array(Eps[i],Eps[j])
-                theta02 = np.concatenate((Xp, X[t], X[t-1], Yp, Y[t], Zp, Z[t-1]),axis=0)
-                tGam, tLam = Modeldyn(theta02, mparams) + 1
+                theta02 = np.concatenate((Xp, X[t], X[t-1], Yp, Y[t], Z[t], Z[t-1]),axis=0)
+                tGam, tLam = Modeldyn(theta02, mparams)
                 Gam[t] = Gam[t] + tGam*Phi[i]*Phi[j]
+                Gam[t] = np.abs(Gam[t])
                 Lam[t] = Lam[t] + tLam*Phi[i]*Phi[j]
+                Lam[t] = np.abs(Lam[t])
     
     # update values for X and Y
-    #Gam = np.abs(Gam)
-    #Lam = np.abs(Lam)
-    Xnew = (Gam)*X
-    Ynew = (Lam)*Y
+    Xnew = Gam*X
+    Ynew = Lam*Y
+    
+    #print 'Xnew: ', Xnew
+    #print 'Ynew: ', Ynew
     
     # run nonlinear regression to get new coefficients
     XZ = np.append(X, Z, axis = 1)
-    XY = np.append(Xnew, Ynew, axis = 1)
+    XY = np.append(X, Y, axis = 1)
     XZ = XZ[0:T-1]
     XY = XY[1:T]
     if regtype == 'poly1':
@@ -318,6 +332,11 @@ while dist > ccrit:
             XZbasis = np.append(XZbasis, temp, axis=0)       
     if fittype == 'MVOLS':
         coeffsnew = MVOLS(XY, XZbasis)
+    U,s,V = np.linalg.svd(X, full_matrices=False)
+    s = np.diag(s)
+    XX = np.dot(V, np.linalg.inv(s))
+    XY = np.dot(np.transpose(U), Y)
+    coeffsnew = np.dot(XX, XY)
         
     # calculate distance between coeffs and coeffsnew
     diff = coeffs - coeffsnew
@@ -325,11 +344,12 @@ while dist > ccrit:
     print('coeffsnew', coeffsnew)
     print('X', X)
     print('Y', Y)
-
+    if np.isnan(coeffsnew).any():
+        print('wtf')
     dist = np.max(np.abs(diff))  
     
     print('count ', count, 'distance', dist)
     
     # update coeffs
     coeffs = (1-damp)*coeffs + damp*coeffsnew
-    #input('Press Enter')
+    #input('Press Enter to continue')

@@ -21,7 +21,7 @@ from LinApp_FindSS import LinApp_FindSS
 We test the algorithm with a simple DSGE model with endogenous labor.
 '''
 
-def Modeldefs(Xp, X, Y, Z, params):
+def Modeldefs(Xp, X, Z, params):
     '''
     This function takes vectors of endogenous and exogenous state variables
     along with a vector of 'jump' variables and returns explicitly defined
@@ -47,24 +47,19 @@ def Modeldefs(Xp, X, Y, Z, params):
     # unpack input vectors
     kp = Xp
     k = X
-    ell = Y
-    if ell > 0.9999:
-        ell = 0.9999
-    elif ell < 0:
-        ell = 0
     z = Z
     
     # unpack params
     [alpha, beta, gamma, delta, chi, theta, tau, rho, sigma] = params
     
     # find definintion values
-    Y = k**alpha*(np.exp(z)*ell)**(1-alpha)
-    w = (1-alpha)*Y/ell
+    Y = k**alpha*(np.exp(z))**(1-alpha)
     r = alpha*Y/k
-    T = tau*(w*ell + (r - delta)*k)
-    c = (1-tau)*(w*ell + (r - delta)*k) + k + T - kp
+    w = (1-alpha)*Y
+    T = tau*(w + (r - delta)*k)
+    c = (1-tau)*(w + (r-delta)*k) + k + T - kp 
+    u = c**(1-gamma)/(1-gamma)
     i = Y - c
-    u = c**(1-gamma)/(1-gamma) - chi*ell**(1+theta)/(1+theta)
     return Y, w, r, T, c, i, u
 
 
@@ -79,8 +74,6 @@ def Modeldyn(theta0, params):
             Xpp: value of capital in two periods
             Xp: value of capital in next period
             X: value of capital this period
-            Yp: value of labor in next period
-            Y: value of labor this period
             Zp: value of productivity in next period
             Z: value of productivity this period
         params: list of parameter values
@@ -91,26 +84,22 @@ def Modeldyn(theta0, params):
     '''
     
     # unpack theat0
-    (Xpp, Xp, X, Yp, Y, Zp, Z) = theta0
+    (Xpp, Xp, X, Zp, Z) = theta0
     
     # unpack params
     [alpha, beta, gamma, delta, chi, theta, tau, rho, sigma] = params
     
     # find definitions for now and next period
-    ell = Y
-    if ell > 1:
-        ell = 0.9999
-    elif ell < 0:
-        ell = 0
-    Y, w, r, T, c, i, u = Modeldefs(Xp, X, Y, Z, params)
-    Yp, wp, rp, Tp, cp, ip, up = Modeldefs(Xpp, Xp, Yp, Zp, params)
+
+    Y, w, r, T, c, i, u = Modeldefs(Xp, X, Z, params)
+    Yp, wp, rp, Tp, cp, ip, up = Modeldefs(Xpp, Xp, Zp, params)
     
     # Evaluate Euler equations
-    E1 = (c**(-gamma)*(1-tau)*w) / (chi*ell**theta) - 1
+    E1 = (c**(-gamma)*(1-tau)*w) / (chi) - 1
     E2 = (c**(-gamma)) / (beta*cp**(-gamma)*(1 + (1-tau)*(rp - delta))) - 1
     
-    return np.array([E1, E2])
-
+    return np.array([E1])
+    #return np.array([E1, E2])
 
 def poly1(Xin, XYparams):
     '''
@@ -128,10 +117,11 @@ def poly1(Xin, XYparams):
             temp = Xin[i]*Xin[j]
             Xbasis = np.append(Xbasis, temp)
     return Xbasis
-        
+    
+    
 def XYfunc(Xm, Zn, XYparams, coeffs):
     '''
-    Given X and Z today generate X and Y tomorrow
+    Given X and Z today generate X tomorrow
     '''
     # take natural logs of Xm 
     Xm = np.log(Xm)
@@ -142,18 +132,12 @@ def XYfunc(Xm, Zn, XYparams, coeffs):
         XYbasis = poly1(XZin, XYparams)
     XYout = np.dot(XYbasis, coeffs)
     Xn = XYout[0:nx]
-    Yn = XYout[nx:nx+ny]  
+    #Yn = XYout[nx:nx+ny]  
     # convert from logs to levels
     Xn = np.exp(Xn)
-    if Xn < 0:
-        Xn = np.array([0])
-    Yn = np.exp(Yn)
-    if Yn > 0.9999:
-        Yn = np.array([0.9999])
-    elif Yn < 0:
-        Yn = np.array([0])
-    return Xn, Yn
-
+    return Xn
+    
+    
 def MVOLS(Y, X):
     '''
     OLS regression with observations in rows
@@ -177,11 +161,12 @@ theta = 2.
 tau = .05   # the 1st stochastic shock
 rho = .9
 sigma = .01
+s = 0.1
 
 # make parameter list to pass to functions
 mparams = np.array([alpha, beta, gamma, delta, chi, theta, tau, rho, sigma])
 nx = 1
-ny = 1
+ny = 0
 nz = 1
 
 NN = rho  # VAR matrix for stochastic shocks
@@ -190,12 +175,12 @@ Sigsr = np.sqrt(Sig) # square root of VCV matrix
 
 
 # declare other parameters
-T = 500   # number of observations to simulate
+T = 20   # number of observations to simulate
 regtype = 'poly1' # functional form for X & Y functions 
 fittype = 'MVOLS'   # regression fitting method
 pord = 3  # order of polynomial for fitting function
 ccrit = 1.0E-8  # convergence criteria for coeffs change
-damp = 0.01  # damping paramter for fixed point algorithm
+damp = 0.05   # damping paramter for fixed point algorithm
 maxit = 500  # maximum number of iterations for fixed point algorithm
 XYparams = (regtype, fittype, pord, nx, ny, nz, ccrit, damp)
 
@@ -203,15 +188,15 @@ XYparams = (regtype, fittype, pord, nx, ny, nz, ccrit, damp)
 # find model steady state
 
 # take a guess for steady state values of k and ell
-guessXY = np.array([.1, .25])
+guessX = np.array([.1])
 
 # find the steady state values using LinApp_FindSS
 Zbar = np.zeros(nz)
-XYbar = LinApp_FindSS(Modeldyn, mparams, guessXY, Zbar, nx, ny)
-(kbar, ellbar) = XYbar
+Xbar = LinApp_FindSS(Modeldyn, mparams, guessX, Zbar, nx, ny)
+kbar = Xbar
 
 # set up steady state input vector
-theta0 = np.array([kbar, kbar, kbar, ellbar, ellbar, 0., 0.])
+theta0 = np.array([kbar, kbar, kbar, 0., 0.])
 
 # check SS solution
 check = Modeldyn(theta0, mparams)
@@ -220,9 +205,9 @@ if np.max(np.abs(check)) > 1.E-6:
     print ('Have NOT found steady state')
     
 Xbar = XYbar[0:nx]
-Ybar = XYbar[nx:nx+ny]
+#Ybar = XYbar[nx:nx+ny]
 print('Xbar: ', Xbar)
-print('Ybar: ', Ybar)
+#print('Ybar: ', Ybar)
 
 # create history of Z's
 Z = np.zeros([T,nz])
@@ -236,7 +221,7 @@ if regtype == 'poly1':
         coeffs[:,i] = coeffs[:,i]*(i+1.)
     
 # declare starting values
-Xstart = np.ones(nx)*Xbar
+Xstart = np.ones(nx)*2
 
 # begin fixed point iteration
 dist = 1.
@@ -248,12 +233,11 @@ while dist > ccrit:
         break
     # initialize X and Y series
     X = np.zeros((T,nx))
-    Y = np.zeros((T,ny))
     
     # constuct X and Y series
-    X[0], Y[0] = XYfunc(Xstart, Z[0], XYparams, coeffs)
+    X[0] = XYfunc(Xstart, Z[0], XYparams, coeffs)
     for t in range(1,T):
-        X[t], Y[t] = XYfunc(X[t-1], Z[t-1], XYparams, coeffs)
+        X[t] = XYfunc(X[t-1], Z[t-1], XYparams, coeffs)
     
     # plot time series
     timeperiods = np.asarray(range(0,T))
@@ -282,19 +266,16 @@ while dist > ccrit:
     # construct Gam and Lam series
     for i in range(0, npts):
         for j in range(0,npts):
-            Xp, Yp = XYfunc(X[0], Z[0], XYparams, coeffs)
-            Zp = Z[0] + np.array(Eps[i],Eps[j])
-            theta01 = np.concatenate((Xp, X[0], Xstart, Yp, Y[0], Zp, Z[0]),axis=0)
-            tGam, tLam = Modeldyn(theta01, mparams) + 1
+            theta01 = np.concatenate((X[1], X[0], Xstart, Y[1], Y[0], Z[1], Z[0]),axis=0)
+            tGam, tLam = Modeldyn1(theta01, mparams)
             Gam[0] = Gam[0] + tGam*Phi[i]*Phi[j]
             Lam[0] = Lam[0] + tLam*Phi[i]*Phi[j]
     for t in range(1,T):
         for i in range(0,npts):
             for j in range(0,npts):
                 Xp, Yp = XYfunc(X[t], Z[t], XYparams, coeffs)
-                Zp = Z[t] + np.array(Eps[i],Eps[j])
-                theta02 = np.concatenate((Xp, X[t], X[t-1], Yp, Y[t], Zp, Z[t-1]),axis=0)
-                tGam, tLam = Modeldyn(theta02, mparams) + 1
+                theta02 = np.concatenate((Xp, X[t], X[t-1], Yp, Y[t], Z[t], Z[t-1]),axis=0)
+                tGam, tLam = Modeldyn1(theta02, mparams)
                 Gam[t] = Gam[t] + tGam*Phi[i]*Phi[j]
                 Lam[t] = Lam[t] + tLam*Phi[i]*Phi[j]
     
@@ -305,7 +286,7 @@ while dist > ccrit:
     Ynew = (Lam)*Y
     
     # run nonlinear regression to get new coefficients
-    XZ = np.append(X, Z, axis = 1)
+    XZ = np.append(Xnew, Z, axis = 1)
     XY = np.append(Xnew, Ynew, axis = 1)
     XZ = XZ[0:T-1]
     XY = XY[1:T]
@@ -332,4 +313,3 @@ while dist > ccrit:
     
     # update coeffs
     coeffs = (1-damp)*coeffs + damp*coeffsnew
-    #input('Press Enter')
