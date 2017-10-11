@@ -157,8 +157,7 @@ while dist > 1e-6 and count < maxit:
     
     # Generate consumption and gamma time series
     c = (1-tau)*(alpha*X[0:T]**alpha*A-delta*X[0:T]) + X[0:T] + tau*(alpha*X[0:T]*A - delta*X[0:T]) - X[1:T+1]
-    Gam = (beta*c[1:T]**(-gam)*(1-delta+alpha*X[1:T]**(alpha-1)*A[1:T]))/(c[0:T-1]**(-gam))
-    
+    Gam = (beta*c[1:T]**(-gam)*(1 + (1-tau)*(alpha*X[1:T]**(alpha-1)*A[1:T] - delta))) / (c[0:T-1]**(-gam))
     # update values for X and Y
     Xnew = (Gam)*X[1:T]
     x = x[0:T-1,:]
@@ -166,13 +165,12 @@ while dist > 1e-6 and count < maxit:
     if fittype == 'MVOLS':
         coeffsnew = MVOLS(Xnew, x)
         
-    # calculate distance between coeffs and coeffsnew
+    # calculate distance between X and Xold
     diff = coeffs - coeffsnew
     print('coeffs', coeffs)
     print('coeffsnew', coeffsnew)
     print('X', X)
     
-    #dist = np.max(np.abs(diff))  
     dist = np.mean(np.abs(1-X1/Xold))
     print('count ', count, 'distance', dist)
     
@@ -180,7 +178,7 @@ while dist > 1e-6 and count < maxit:
     Xold = X1
     coeffs = (1-damp)*coeffs + damp*coeffsnew
     
-''' GSSA with higher-order polynomials '''
+''' GSSA with higher-order polynomial '''
 pord = 3
 if regtype == 'poly1':
     cnumb = int(pord*(nx+nz) + .5*(nx+nz-1)*(nx+nz-2))
@@ -214,7 +212,7 @@ while dist > 1e-6 and count < maxit:
     
     # Generate consumption and gamma series
     c = (1-tau)*(alpha*X[0:T]**alpha*A-delta*X[0:T]) + X[0:T] + tau*(alpha*X[0:T]*A - delta*X[0:T]) - X[1:T+1]
-    Gam = (beta*c[1:T]**(-gam)*(1-delta+alpha*X[1:T]**(alpha-1)*A[1:T]))/(c[0:T-1]**(-gam))
+    Gam = (beta*c[1:T]**(-gam)*(1 + (1-tau)*(alpha*X[1:T]**(alpha-1)*A[1:T] - delta))) / (c[0:T-1]**(-gam))
     
     # update values for X and Y
     Xnew = (Gam)*X[1:T]
@@ -223,7 +221,7 @@ while dist > 1e-6 and count < maxit:
     if fittype == 'MVOLS':
         coeffsnew = MVOLS(Xnew, x)
         
-    # calculate distance between coeffs and coeffsnew
+    # calculate distance between X and Xold
     diff = coeffs - coeffsnew
     print('coeffs', coeffs)
     print('coeffsnew', coeffsnew)
