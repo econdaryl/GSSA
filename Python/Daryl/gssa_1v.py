@@ -56,19 +56,6 @@ def Modeldyn(theta0, params):
     
     return np.array([E2])
 
-def Modeldyn1(theta0, params):
-    (Xpp, Xp, X, Zp, Z) = theta0
-    
-    [alpha, beta, gamma, delta, chi, theta, tau, rho, sigma] = params
-    
-    GDP, w, r, T, c, i, u = Modeldefs(Xp, X, Z, params)
-    GDPp, wp, rp, Tp, cp, ip, up = Modeldefs(Xpp, Xp, Zp, params)
-    
-    #E1 = (c**(-gamma)*(1-tau)*w) / (chi) - 1
-    E2 = (beta*cp**(-gamma)*(1 + (1-tau)*(rp - delta))) / (c**(-gamma))
-    
-    return np.array([E2])
-
 def poly1(Xin, XYparams):
     '''
     Includes polynomial terms up to order 'pord' for each element and quadratic 
